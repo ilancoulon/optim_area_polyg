@@ -276,7 +276,7 @@ public class OptimalPolygon {
     	boolean clockwiseEverywhere = this.isClockwise(p, a, b) && this.isClockwise(p, b, c) && this.isClockwise(p, c, a);
     	boolean counterclockEverywhere = this.isCounterClockwise(p, a, b) && this.isCounterClockwise(p, b, c) && this.isCounterClockwise(p, c, a);
     	
-    	return clockwiseEverywhere && counterclockEverywhere;
+    	return clockwiseEverywhere || counterclockEverywhere;
     }
     
     // Stolen from https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
