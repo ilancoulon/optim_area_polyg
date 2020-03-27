@@ -67,6 +67,16 @@ public class OptimalPolygon {
 	 * @return the ordered set of points on the convex hull
 	 */
      public int[] computeConvexHull() {
+    	 ArrayList<Integer> convHList = this.computeConvexHullList();
+    	int outerN = convHList.size();
+    	int[] convH = new int[outerN];
+    	for(int i = 0; i<outerN; i++) {
+    		convH[i] = convHList.get(i);
+    	}
+    	
+    	return convH;
+    }
+    public ArrayList<Integer> computeConvexHullList() {
     	System.out.print("Performing Andrew algorithm for convex hull...");
     	// trier la region 
     	ArrayList<Integer> sortedPoints= new ArrayList<Integer>();
@@ -82,13 +92,7 @@ public class OptimalPolygon {
     		upperHull.add(lowerHull.get(i));
     	}
     	System.out.println("done");
-    	int outerN = upperHull.size();
-    	int[] convH = new int[outerN];
-    	for(int i = 0; i<outerN; i++) {
-    		convH[i] = upperHull.get(i);
-    	}
-    	
-    	return convH;
+    	return upperHull;
     }
     
     /**
@@ -144,7 +148,7 @@ public class OptimalPolygon {
      * @param polygon  an array of size 'n', storing a permutation of the input points (listed in ccw order on the boundary)
      */
     public long computeArea(int[] polygon) {
-    	System.out.println("Computing the area of a polygon...");
+//    	System.out.println("Computing the area of a polygon...");
     	if(polygon==null)
     		return -1;
     	
@@ -156,6 +160,24 @@ public class OptimalPolygon {
     	}
     	area += (this.points[polygon[polygon.length-1]].x + this.points[polygon[0]].x) 
 				* (this.points[polygon[polygon.length-1]].y - this.points[polygon[0]].y) / 2;
+    	
+    	return area;
+    }
+    public long computeArea(ArrayList<Integer> polygon) {
+    	//System.out.println("Computing the area of a polygon...");
+    	if(polygon==null)
+    		return -1;
+    	
+    	int size = polygon.size();
+    	
+    	// Formula stolen from http://alienryderflex.com/polygon_area/
+    	long area = 0;
+    	for(int i = 0; i < size-1; i++) {
+    		area += (this.points[polygon.get(i)].x + this.points[polygon.get(i+1)].x) 
+    				* (this.points[polygon.get(i)].y - this.points[polygon.get(i+1)].y) / 2;
+    	}
+    	area += (this.points[polygon.get(size-1)].x + this.points[polygon.get(0)].x) 
+				* (this.points[polygon.get(size-1)].y - this.points[polygon.get(0)].y) / 2;
     	
     	return area;
     }
@@ -186,22 +208,56 @@ public class OptimalPolygon {
     	}
     	
     	
-    	// Check self-intersection (really naive, should implement Bentley-Ottmann algorithm)
-    	for (int i = 0; i < n - 1; i++) {
-    		for (int j = i+2; j < n - 1; j++) {
-    			if (this.doIntersect(polygon[i], polygon[i+1], polygon[j], polygon[j+1])) {
-    				return false;
-    			}
-    		}
-    	}
-		for (int j = 1; j < n - 2; j++) {
-			if (this.doIntersect(polygon[n-1], polygon[0], polygon[j], polygon[j+1])) {
-				return false;
-			}
-		}
+    	// Check self-intersection
+    	if (this.doesSelfIntersect(polygon))
+    		return false;
     	
     	
     	return true;
+    }
+    
+    /**
+     * Checks whether the polygon intersects itself in a really naive (O(n^2)), 
+     * if needed, we should implement Bentley-Ottmann algorithm that is O(nlogn)
+     * @param polygon
+     * @return
+     */
+    public boolean doesSelfIntersect(int[] polygon) {
+    	for (int i = 0; i < polygon.length - 1; i++) {
+    		for (int j = i+2; j < polygon.length - 1; j++) {
+    			if (this.doIntersect(polygon[i], polygon[i+1], polygon[j], polygon[j+1])) {
+    				return true;
+    			}
+    		}
+    	}
+		for (int j = 1; j < polygon.length - 2; j++) {
+			if (this.doIntersect(polygon[polygon.length-1], polygon[0], polygon[j], polygon[j+1])) {
+				return true;
+			}
+		}
+		return false;
+    }
+    public boolean doesSelfIntersect(ArrayList<Integer> polygon) {
+    	int size = polygon.size();
+    	for (int i = 0; i < size - 1; i++) {
+    		for (int j = i+2; j < size - 1; j++) {
+    			if (this.doIntersect(polygon.get(i), polygon.get(i+1), polygon.get(j), polygon.get(j+1))) {
+    				return true;
+    			}
+    		}
+    	}
+		for (int j = 1; j < size - 2; j++) {
+			if (this.doIntersect(polygon.get(size-1), polygon.get(0), polygon.get(j), polygon.get(j+1))) {
+				return true;
+			}
+		}
+		return false;
+    }
+    public boolean doesSelfIntersectAddingOnePoint(int p, int index, ArrayList<Integer> polygon) {
+    	polygon.add(index+1, p);
+    	boolean intersection = this.doesSelfIntersect(polygon);
+    	polygon.remove(index+1);
+    	return intersection;
     }
 
     /**
@@ -213,14 +269,79 @@ public class OptimalPolygon {
     	System.out.print("Computing a simple polygon of minimal area: ");
     	long startTime=System.nanoTime(), endTime; // for evaluating time performances
     	
-    	// COMPLETE THIS METHOD
-    	System.out.println("TO BE COMPLETED");
+    	int n = this.points.length;
+    	ArrayList<Integer> polygon = this.computeConvexHullList();
+    	ArrayList<Integer> remainingPoints = new ArrayList<Integer>(n);
+    	for (int i = 0; i < n; i++) {
+    		if (!polygon.contains(i))
+    			remainingPoints.add(i);
+    	}
+    	while (!remainingPoints.isEmpty()) {
+    		int v1InPolygonIndex = 0;
+    		int pToKeepIndex = 0;
+    		long maxAreaTriangle = 0;
+    		
+    		for (int i = 0; i < remainingPoints.size(); i++) {
+    			int p = remainingPoints.get(i);
+    			for (int j = 0; j < polygon.size() - 1; j++) {
+    				
+    				int v1 = polygon.get(j), v2 = polygon.get(j+1);
+    				int[] currentTriangle = {p, v1, v2};
+    				long currentArea = this.computeArea(currentTriangle);
+    				if (currentArea > maxAreaTriangle) {
+    					if (this.okToAddThisPoint(p, j, polygon, remainingPoints)) {
+    						maxAreaTriangle = currentArea;
+    						v1InPolygonIndex = j;
+    						pToKeepIndex = i;
+    					}
+    				}
+    			}
+    			int v1 = polygon.get(polygon.size() - 1), v2 = polygon.get(0);
+				int[] currentTriangle = {p, v1, v2};
+				long currentArea = this.computeArea(currentTriangle);
+				if (currentArea > maxAreaTriangle) {
+					if (this.okToAddThisPoint(p, polygon.size() - 1, polygon, remainingPoints)) {
+						maxAreaTriangle = currentArea;
+						v1InPolygonIndex = polygon.size() - 1;
+						pToKeepIndex = i;
+					}
+				}
+    		}
+    		System.out.println("Polygon: "+polygon.size()+"/"+n);
+    		polygon.add(v1InPolygonIndex+1, remainingPoints.get(pToKeepIndex));
+    		remainingPoints.remove(pToKeepIndex);
+    		
+    	}
     	
     	endTime=System.nanoTime();
         double duration=(double)(endTime-startTime)/1000000000.;
     	System.out.println("Elapsed time: "+duration+" seconds");
     	
-    	return null; // remove this line
+    	int[] polygonArray = new int[n];
+    	for (int i = 0; i < polygon.size(); i++) {
+    		polygonArray[i] = polygon.get(i);
+    	}
+    	
+    	return polygonArray;
+    }
+    
+    private boolean okToAddThisPoint(int p, int indexInPolygon, ArrayList<Integer> polygon, ArrayList<Integer> remainingPoints) {
+    	if (this.doesSelfIntersectAddingOnePoint(p, indexInPolygon, polygon))
+    		return false;
+    	
+    	int nextIndex = indexInPolygon + 1;
+    	if (nextIndex == polygon.size())
+    		nextIndex = 0;
+
+    	if (this.listInTriangle(remainingPoints, p, polygon.get(indexInPolygon), polygon.get(nextIndex)))
+    		return false;
+    	
+    	return true;
+    }
+    
+    public long distance(int p, int q) {
+    	return (this.points[p].x - this.points[q].x)*(this.points[p].x - this.points[q].x) 
+    			+ (this.points[p].y - this.points[q].y)*(this.points[p].y - this.points[q].y);
     }
 
     /**
@@ -277,6 +398,15 @@ public class OptimalPolygon {
     	boolean counterclockEverywhere = this.isCounterClockwise(p, a, b) && this.isCounterClockwise(p, b, c) && this.isCounterClockwise(p, c, a);
     	
     	return clockwiseEverywhere || counterclockEverywhere;
+    }
+    
+    public boolean listInTriangle(ArrayList<Integer> list, int a, int b, int c) {
+    	int size = list.size();
+    	for(int i = 0; i < size; i++) {
+    		if (this.isInTriangle(list.get(i), a, b, c)) 
+    			return true;
+    	}
+    	return false;
     }
     
     // Stolen from https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
