@@ -255,8 +255,28 @@ public class OptimalPolygon {
         return (val > 0)? 1: 2; // clock or counterclock wise 
     }
     
+    private boolean isClockwise(int p, int q, int r) {
+    	return this.orientation(p, q, r) == 1;
+    }
+    
     private boolean isCounterClockwise(int p, int q, int r) {
     	return this.orientation(p, q, r) == 2;
+    }
+    
+    /**
+     * Checks whether the point p is in the triangle formed by the points a, b and c
+     * @param p
+     * @param a
+     * @param b
+     * @param c
+     * @return
+     */
+    public boolean isInTriangle(int p, int a, int b, int c) {
+    	// We could avoid computing the orientation twice...
+    	boolean clockwiseEverywhere = this.isClockwise(p, a, b) && this.isClockwise(p, b, c) && this.isClockwise(p, c, a);
+    	boolean counterclockEverywhere = this.isCounterClockwise(p, a, b) && this.isCounterClockwise(p, b, c) && this.isCounterClockwise(p, c, a);
+    	
+    	return clockwiseEverywhere && counterclockEverywhere;
     }
     
     // Stolen from https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
