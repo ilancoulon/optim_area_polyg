@@ -353,14 +353,56 @@ public class OptimalPolygon {
     	System.out.print("Computing a simple polygon of maximal area: ");
     	long startTime=System.nanoTime(), endTime; // for evaluating time performances
     	
-    	// COMPLETE THIS METHOD
-    	System.out.println("TO BE COMPLETED");
-    	
+    	int n = this.points.length;
+    	ArrayList<Integer> polygon = this.computeConvexHullList();
+    	ArrayList<Integer> remainingPoints = new ArrayList<Integer>(n);
+    	for (int i = 0; i < n; i++) {
+    		if (!polygon.contains(i))
+    			remainingPoints.add(i);
+    	}
+    	while (!remainingPoints.isEmpty()) {
+    		int polygon_point_index = 0;
+    		int pkept = 0;
+    		long minArea = Long.MAX_VALUE;
+    		for (int i=0; i<remainingPoints.size(); i++) {
+    			int p=remainingPoints.get(i);
+    			for (int j=0; j<polygon.size()-1; j++) {
+    				int v1 = polygon.get(j), v2 = polygon.get(j+1);
+    				int[] triangle = {p, v1, v2};
+    				long currentArea = this.computeArea(triangle);
+    				if (currentArea < minArea) {
+    					if (this.okToAddThisPoint(p, j, polygon, remainingPoints)) {
+    						minArea = currentArea;
+    						polygon_point_index = j;
+    						pkept = i;
+    					}
+    				}
+    			}
+    			int v1 = polygon.get(polygon.size() - 1), v2 = polygon.get(0);
+				int[] currentTriangle = {p, v1, v2};
+				long currentArea = this.computeArea(currentTriangle);
+				if (currentArea < minArea) {
+					if (this.okToAddThisPoint(p, polygon.size() - 1, polygon, remainingPoints)) {
+						minArea = currentArea;
+						polygon_point_index = polygon.size() - 1;
+						pkept = i;
+					}
+				}
+    		}
+    		System.out.println("Polygon: "+polygon.size()+"/"+n);
+    		polygon.add(polygon_point_index+1, remainingPoints.get(pkept));
+    		remainingPoints.remove(pkept);
+    	}
     	endTime=System.nanoTime();
         double duration=(double)(endTime-startTime)/1000000000.;
     	System.out.println("Elapsed time: "+duration+" seconds");
     	
-    	return null; // remove this line
+    	int[] polygonArray = new int[n];
+    	for (int i = 0; i < polygon.size(); i++) {
+    		polygonArray[i] = polygon.get(i);
+    	}
+    	
+    	return polygonArray;
     }
     
     // Stolen from https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
