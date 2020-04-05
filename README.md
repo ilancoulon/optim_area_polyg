@@ -4,3 +4,4 @@ This project was made by Dana Chaillard and Ilan Coulon for the Ecole polytechni
 
 This can be opened with Eclipse and the class AreaOptimizer can be launched with the name of any file in the **data** directory as a first argument.
 
+You can read details about our implementation and its results in the [PDF report](https://github.com/ilancoulon/optim_area_polyg/blob/master/report.pdf).
