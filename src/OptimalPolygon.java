@@ -254,18 +254,73 @@ public class OptimalPolygon {
 		return false;
     }
     public boolean doesSelfIntersectAddingOnePoint(int p, int index, ArrayList<Integer> polygon) {
-    	polygon.add(index+1, p);
-    	boolean intersection = this.doesSelfIntersect(polygon);
-    	polygon.remove(index+1);
-    	return intersection;
+//    	polygon.add(index+1, p);
+//    	boolean intersects = this.doesSelfIntersect(polygon);
+//    	polygon.remove(index+1);
+//    	return intersects;
+    	int size = polygon.size();
+    	int nextIndex = (index + 1) % size;
+    	for (int j = 0; j < size - 1; j++) {
+			if (polygon.get(index) != polygon.get(j) && polygon.get(index) != polygon.get(j+1) && this.doIntersect(polygon.get(index), p, polygon.get(j), polygon.get(j+1))) {
+				return true;
+			}
+			if (polygon.get(nextIndex) != polygon.get(j) && polygon.get(nextIndex) != polygon.get(j+1) && this.doIntersect(polygon.get(nextIndex), p, polygon.get(j), polygon.get(j+1))) {
+				return true;
+			}
+		}
+    	if (polygon.get(index) != polygon.get(0) && polygon.get(index) != polygon.get(size-1) && this.doIntersect(polygon.get(index), p, polygon.get(0), polygon.get(size-1))) {
+			return true;
+		}
+		if (polygon.get(nextIndex) != polygon.get(0) && polygon.get(nextIndex) != polygon.get(size-1) && this.doIntersect(polygon.get(nextIndex), p, polygon.get(0), polygon.get(size-1))) {
+			return true;
+		}
+    	return false;
+    	
+//    	
+//    	for (int j = 0; j < index - 1; j++) {
+//			if (this.doIntersect(polygon.get(index), p, polygon.get(j), polygon.get(j+1))) {
+//				return true;
+//			}
+//		}
+//    	int firstForSecondIndex = 0;
+//    	if (nextIndex == 0)
+//    		firstForSecondIndex = 1;
+//    	for (int j = firstForSecondIndex; j < index; j++) {
+//			if (this.doIntersect(polygon.get(nextIndex), p, polygon.get(j), polygon.get(j+1))) {
+//				return true;
+//			}
+//    	}
+//    	for (int j = index+1; j < size - 1; j++) {
+//    		if (this.doIntersect(polygon.get(index), p, polygon.get(j), polygon.get(j+1))) {
+//				return true;
+//			}
+//    	}
+//    	for (int j = index+2; j < size - 1; j++) {
+//			if (this.doIntersect(polygon.get(nextIndex), p, polygon.get(j), polygon.get(j+1))) {
+//				return true;
+//			}
+//		}
+//    	if (index != 0 && index != size-1) {
+//    		if (this.doIntersect(polygon.get(index), p, polygon.get(0), polygon.get(size-1))) {
+//    			return true;
+//    		}
+//    	}
+//    	if (index != size-1 && index != size-2) {
+//    		if (this.doIntersect(polygon.get((index + 1) % size), p, polygon.get(0), polygon.get(size-1))) {
+//    			return true;
+//    		}
+//    	}
+//		
+//    	return false;
     }
 
     /**
      * Main function that computes a simple polygon of minimal area (whose vertices are exactly the input points).<br>
      * 
      * @return  an array of size 'n' storing the computed polygon as a permutation of point indices
+     * @throws Exception 
      */
-    public int[] computeMinimalAreaPolygon() {
+    public int[] computeMinimalAreaPolygon() throws Exception {
     	System.out.print("Computing a simple polygon of minimal area: ");
     	long startTime=System.nanoTime(), endTime; // for evaluating time performances
     	
@@ -280,6 +335,7 @@ public class OptimalPolygon {
     		int v1InPolygonIndex = 0;
     		int pToKeepIndex = 0;
     		long maxAreaTriangle = 0;
+    		boolean foundOne = false;
     		
     		for (int i = 0; i < remainingPoints.size(); i++) {
     			int p = remainingPoints.get(i);
@@ -293,6 +349,7 @@ public class OptimalPolygon {
     						maxAreaTriangle = currentArea;
     						v1InPolygonIndex = j;
     						pToKeepIndex = i;
+    						foundOne = true;
     					}
     				}
     			}
@@ -304,10 +361,13 @@ public class OptimalPolygon {
 						maxAreaTriangle = currentArea;
 						v1InPolygonIndex = polygon.size() - 1;
 						pToKeepIndex = i;
+						foundOne = true;
 					}
 				}
     		}
-    		System.out.println("Polygon: "+polygon.size()+"/"+n);
+//    		System.out.println("Polygon: "+polygon.size()+"/"+n);
+    		if (!foundOne)
+    			System.out.println("Did not found any candidate");
     		polygon.add(v1InPolygonIndex+1, remainingPoints.get(pToKeepIndex));
     		remainingPoints.remove(pToKeepIndex);
     		
@@ -364,6 +424,7 @@ public class OptimalPolygon {
     		int polygon_point_index = 0;
     		int pkept = 0;
     		long minArea = Long.MAX_VALUE;
+    		boolean foundOne = false;
     		for (int i=0; i<remainingPoints.size(); i++) {
     			int p=remainingPoints.get(i);
     			for (int j=0; j<polygon.size()-1; j++) {
@@ -375,6 +436,7 @@ public class OptimalPolygon {
     						minArea = currentArea;
     						polygon_point_index = j;
     						pkept = i;
+    						foundOne = true;
     					}
     				}
     			}
@@ -386,10 +448,13 @@ public class OptimalPolygon {
 						minArea = currentArea;
 						polygon_point_index = polygon.size() - 1;
 						pkept = i;
+						foundOne = true;
 					}
 				}
     		}
-    		System.out.println("Polygon: "+polygon.size()+"/"+n);
+//    		System.out.println("Polygon: "+polygon.size()+"/"+n);
+    		if (!foundOne)
+    			System.out.println("Did not found any candidate");
     		polygon.add(polygon_point_index+1, remainingPoints.get(pkept));
     		remainingPoints.remove(pkept);
     	}
