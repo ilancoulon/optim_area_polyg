@@ -156,12 +156,14 @@ public class OptimalPolygon {
     	long area = 0;
     	for(int i = 0; i < polygon.length-1; i++) {
     		area += (this.points[polygon[i]].x + this.points[polygon[i+1]].x) 
-    				* (this.points[polygon[i]].y - this.points[polygon[i+1]].y) / 2;
+    				* (this.points[polygon[i]].y - this.points[polygon[i+1]].y);
     	}
     	area += (this.points[polygon[polygon.length-1]].x + this.points[polygon[0]].x) 
-				* (this.points[polygon[polygon.length-1]].y - this.points[polygon[0]].y) / 2;
+				* (this.points[polygon[polygon.length-1]].y - this.points[polygon[0]].y);
     	
-    	return area;
+    	if (area < 0)
+    		area *= -1;
+    	return area / 2;
     }
     public long computeArea(ArrayList<Integer> polygon) {
     	//System.out.println("Computing the area of a polygon...");
