@@ -15,7 +15,7 @@ import Jcg.geometry.Segment_2;
  * Main class providing tools for computing a polygon with minimal (maximal) area, whose vertices
  * are given as input point cloud (there are no interior points). <br>
  * 
- * @author Luca Castelli Aleardi (2020)
+ * @author Dana Chaillard, Ilan Coulon, Luca Castelli Aleardi (2020)
  *
  */
 public class OptimalPolygon {
@@ -23,6 +23,7 @@ public class OptimalPolygon {
 	/** Input point cloud: the set of vertices of the final polygon: an array of size 'n' */
 	GridPoint_2[] points;
 	
+	/** Comparator used to sort the points before the Andrew algorithm */
 	class SortPointsByCoordinates implements Comparator<Integer> {
 		GridPoint_2[] points;
 		public SortPointsByCoordinates(GridPoint_2[] points) {
@@ -34,11 +35,17 @@ public class OptimalPolygon {
 				return -1;
 			}
 			if (this.points[p1].x == this.points[p2].x) {
-				return this.points[p2].y - this.points[p1].y;
+				if (this.points[p1].y < this.points[p2].y) {
+					return -1;
+				}
+				if (this.points[p1].y == this.points[p2].y)
+					return 0;
+				return 1;
 			}
 			return 1;
 		}
 	}
+	
 
     /**
      * Initialize the input of the program
@@ -53,7 +60,6 @@ public class OptimalPolygon {
      * Remark: this method will be used to compute the SCORE.
      */
     public long computeAreaConvexHull() {
-    	
     	int[] convexH = this.computeConvexHull();
     	return this.computeArea(convexH);
     }
@@ -78,7 +84,7 @@ public class OptimalPolygon {
     }
     public ArrayList<Integer> computeConvexHullList() {
     	System.out.print("Performing Andrew algorithm for convex hull...");
-    	// trier la region 
+    	
     	ArrayList<Integer> sortedPoints= new ArrayList<Integer>();
     	for (int i = 0; i < this.points.length; i++)
     		sortedPoints.add(i);
@@ -148,7 +154,6 @@ public class OptimalPolygon {
      * @param polygon  an array of size 'n', storing a permutation of the input points (listed in ccw order on the boundary)
      */
     public long computeArea(int[] polygon) {
-//    	System.out.println("Computing the area of a polygon...");
     	if(polygon==null)
     		return -1;
     	
@@ -166,7 +171,6 @@ public class OptimalPolygon {
     	return area / 2;
     }
     public long computeArea(ArrayList<Integer> polygon) {
-    	//System.out.println("Computing the area of a polygon...");
     	if(polygon==null)
     		return -1;
     	
@@ -219,7 +223,7 @@ public class OptimalPolygon {
     }
     
     /**
-     * Checks whether the polygon intersects itself in a really naive (O(n^2)), 
+     * Checks whether the polygon intersects itself in a really naive way (O(n^2)), 
      * if needed, we should implement Bentley-Ottmann algorithm that is O(nlogn)
      * @param polygon
      * @return
@@ -255,11 +259,16 @@ public class OptimalPolygon {
 		}
 		return false;
     }
+    
+    /**
+     * Checks whether adding a point to a valid simple polygon makes it self intersect
+     * 
+     * @param p
+     * @param index
+     * @param polygon
+     * @return
+     */
     public boolean doesSelfIntersectAddingOnePoint(int p, int index, ArrayList<Integer> polygon) {
-//    	polygon.add(index+1, p);
-//    	boolean intersects = this.doesSelfIntersect(polygon);
-//    	polygon.remove(index+1);
-//    	return intersects;
     	int size = polygon.size();
     	int nextIndex = (index + 1) % size;
     	for (int j = 0; j < size - 1; j++) {
@@ -277,44 +286,20 @@ public class OptimalPolygon {
 			return true;
 		}
     	return false;
-    	
-//    	
-//    	for (int j = 0; j < index - 1; j++) {
-//			if (this.doIntersect(polygon.get(index), p, polygon.get(j), polygon.get(j+1))) {
-//				return true;
-//			}
-//		}
-//    	int firstForSecondIndex = 0;
-//    	if (nextIndex == 0)
-//    		firstForSecondIndex = 1;
-//    	for (int j = firstForSecondIndex; j < index; j++) {
-//			if (this.doIntersect(polygon.get(nextIndex), p, polygon.get(j), polygon.get(j+1))) {
-//				return true;
-//			}
-//    	}
-//    	for (int j = index+1; j < size - 1; j++) {
-//    		if (this.doIntersect(polygon.get(index), p, polygon.get(j), polygon.get(j+1))) {
-//				return true;
-//			}
-//    	}
-//    	for (int j = index+2; j < size - 1; j++) {
-//			if (this.doIntersect(polygon.get(nextIndex), p, polygon.get(j), polygon.get(j+1))) {
-//				return true;
-//			}
-//		}
-//    	if (index != 0 && index != size-1) {
-//    		if (this.doIntersect(polygon.get(index), p, polygon.get(0), polygon.get(size-1))) {
-//    			return true;
-//    		}
-//    	}
-//    	if (index != size-1 && index != size-2) {
-//    		if (this.doIntersect(polygon.get((index + 1) % size), p, polygon.get(0), polygon.get(size-1))) {
-//    			return true;
-//    		}
-//    	}
-//		
-//    	return false;
     }
+    
+    private boolean okToAddThisPoint(int p, int indexInPolygon, ArrayList<Integer> polygon, ArrayList<Integer> remainingPoints) {
+    	if (this.doesSelfIntersectAddingOnePoint(p, indexInPolygon, polygon))
+    		return false;
+    	
+    	int nextIndex = (indexInPolygon + 1) % polygon.size();
+
+    	if (this.listInTriangle(remainingPoints, p, polygon.get(indexInPolygon), polygon.get(nextIndex)))
+    		return false;
+    	
+    	return true;
+    }
+    
 
     /**
      * Main function that computes a simple polygon of minimal area (whose vertices are exactly the input points).<br>
@@ -336,13 +321,12 @@ public class OptimalPolygon {
     	while (!remainingPoints.isEmpty()) {
     		int v1InPolygonIndex = 0;
     		int pToKeepIndex = 0;
-    		long maxAreaTriangle = 0;
+    		long maxAreaTriangle = -1;
     		boolean foundOne = false;
     		
     		for (int i = 0; i < remainingPoints.size(); i++) {
     			int p = remainingPoints.get(i);
     			for (int j = 0; j < polygon.size() - 1; j++) {
-    				
     				int v1 = polygon.get(j), v2 = polygon.get(j+1);
     				int[] currentTriangle = {p, v1, v2};
     				long currentArea = this.computeArea(currentTriangle);
@@ -367,9 +351,12 @@ public class OptimalPolygon {
 					}
 				}
     		}
-//    		System.out.println("Polygon: "+polygon.size()+"/"+n);
-    		if (!foundOne)
+    		if (!foundOne) {
     			System.out.println("Did not found any candidate");
+    			System.out.println(remainingPoints);
+    			break;
+    		}
+    			
     		polygon.add(v1InPolygonIndex+1, remainingPoints.get(pToKeepIndex));
     		remainingPoints.remove(pToKeepIndex);
     		
@@ -387,24 +374,6 @@ public class OptimalPolygon {
     	return polygonArray;
     }
     
-    private boolean okToAddThisPoint(int p, int indexInPolygon, ArrayList<Integer> polygon, ArrayList<Integer> remainingPoints) {
-    	if (this.doesSelfIntersectAddingOnePoint(p, indexInPolygon, polygon))
-    		return false;
-    	
-    	int nextIndex = indexInPolygon + 1;
-    	if (nextIndex == polygon.size())
-    		nextIndex = 0;
-
-    	if (this.listInTriangle(remainingPoints, p, polygon.get(indexInPolygon), polygon.get(nextIndex)))
-    		return false;
-    	
-    	return true;
-    }
-    
-    public long distance(int p, int q) {
-    	return (this.points[p].x - this.points[q].x)*(this.points[p].x - this.points[q].x) 
-    			+ (this.points[p].y - this.points[q].y)*(this.points[p].y - this.points[q].y);
-    }
 
     /**
      * Main function that computes a simple polygon of maximal area (whose vertices are exactly the input points).<br>
@@ -472,6 +441,16 @@ public class OptimalPolygon {
     	return polygonArray;
     }
     
+    
+    // -------------------------------------------------------------
+    // GEOMETRY FUNCTIONS (taking index in this.points as points)
+    // -------------------------------------------------------------
+    
+    public long distance(int p, int q) {
+    	return (this.points[p].x - this.points[q].x)*(this.points[p].x - this.points[q].x) 
+    			+ (this.points[p].y - this.points[q].y)*(this.points[p].y - this.points[q].y);
+    }
+    
     // Stolen from https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
     private int orientation(int p, int q, int r) 
     { 
@@ -531,10 +510,22 @@ public class OptimalPolygon {
         // General case 
         if (o1 != o2 && o3 != o4) 
             return true; 
+        
+        if (o1 == 0 && this.liesOn(p1, p2, q1)) return true; 
+        
+        // p1, q1 and q2 are colinear and q2 lies on segment p1q1 
+        if (o2 == 0 && this.liesOn(p1, q2, q1)) return true; 
+      
+        // p2, q2 and p1 are colinear and p1 lies on segment p2q2 
+        if (o3 == 0 && this.liesOn(p2, p1, q2)) return true; 
+      
+        // p2, q2 and q1 are colinear and q1 lies on segment p2q2 
+        if (o4 == 0 && this.liesOn(p2, q1, q2)) return true; 
       
         return false; // Doesn't fall in any of the above cases 
     }
     
+    // Checks whether p lies on the segment [q, r]
     private boolean liesOn(int p, int q, int r) 
     { 
         if (this.points[q].x <= Math.max(this.points[p].x, this.points[r].x) && this.points[q].x >= Math.min(this.points[p].x, this.points[r].x) && 
